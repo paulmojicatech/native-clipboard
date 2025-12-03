@@ -61,7 +61,7 @@ For complete examples with React and Vue, see [USAGE_EXAMPLE.md](./USAGE_EXAMPLE
 * [`echo(...)`](#echo)
 * [`enableContextMenu(...)`](#enablecontextmenu)
 * [`disableContextMenu()`](#disablecontextmenu)
-* [`addListener('clipboardMenuAction', ...)`](#addlistenerclipboardmenuaction)
+* [`addListener('clipboardMenuAction', ...)`](#addlistenerclipboardmenuaction-)
 * [`removeAllListeners()`](#removealllisteners)
 * [Interfaces](#interfaces)
 
@@ -84,20 +84,22 @@ echo(options: { value: string; }) => Promise<{ value: string; }>
 
 --------------------
 
+
 ### enableContextMenu(...)
 
 ```typescript
-enableContextMenu(options?: { enableCopy?: boolean; enablePaste?: boolean; enableCut?: boolean; enableSelectAll?: boolean; }) => Promise<void>
+enableContextMenu(options?: { enableCopy?: boolean | undefined; enablePaste?: boolean | undefined; enableCut?: boolean | undefined; enableSelectAll?: boolean | undefined; } | undefined) => Promise<void>
 ```
 
-Enable native long press context menu for copy/paste.
-This enables system-level gesture recognition on the WebView.
+Enable native long press context menu for copy/paste
+This enables system-level gesture recognition on the WebView
 
-| Param         | Type                                                                                                              |
-| ------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Param         | Type                                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------- |
 | **`options`** | <code>{ enableCopy?: boolean; enablePaste?: boolean; enableCut?: boolean; enableSelectAll?: boolean; }</code> |
 
 --------------------
+
 
 ### disableContextMenu()
 
@@ -105,9 +107,10 @@ This enables system-level gesture recognition on the WebView.
 disableContextMenu() => Promise<void>
 ```
 
-Disable native long press context menu.
+Disable native long press context menu
 
 --------------------
+
 
 ### addListener('clipboardMenuAction', ...)
 
@@ -117,14 +120,15 @@ addListener(eventName: 'clipboardMenuAction', listenerFunc: (event: ClipboardMen
 
 Add a listener for clipboard context menu events
 
-| Param              | Type                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| **`eventName`**    | <code>'clipboardMenuAction'</code>                                                    |
-| **`listenerFunc`** | <code>(event: <a href="#clipboardmenuactionevent">ClipboardMenuActionEvent</a>) => void</code> |
+| Param              | Type                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------- |
+| **`eventName`**    | <code>'clipboardMenuAction'</code>                                                                |
+| **`listenerFunc`** | <code>(event: <a href="#clipboardmenuactionevent">ClipboardMenuActionEvent</a>) =&gt; void</code> |
 
 **Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt;</code>
 
 --------------------
+
 
 ### removeAllListeners()
 
@@ -136,21 +140,24 @@ Remove all listeners for this plugin
 
 --------------------
 
+
 ### Interfaces
+
 
 #### PluginListenerHandle
 
-| Prop         | Type                      |
-| ------------ | ------------------------- |
-| **`remove`** | <code>() => Promise&lt;void&gt;</code> |
+| Prop         | Type                                      |
+| ------------ | ----------------------------------------- |
+| **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
+
 
 #### ClipboardMenuActionEvent
 
-| Prop               | Type                                                | Description                                         |
-| ------------------ | --------------------------------------------------- | --------------------------------------------------- |
-| **`action`**       | <code>'copy' \| 'paste' \| 'cut' \| 'selectAll'</code> | The action selected from the menu               |
-| **`text`**         | <code>string</code>                                 | Present when action is 'paste' - the text to paste |
-| **`selectedText`** | <code>string</code>                                 | Present when action is 'copy' or 'cut'             |
+| Prop               | Type                                                   |
+| ------------------ | ------------------------------------------------------ |
+| **`action`**       | <code>'copy' \| 'paste' \| 'cut' \| 'selectAll'</code> |
+| **`text`**         | <code>string</code>                                    |
+| **`selectedText`** | <code>string</code>                                    |
 
 </docgen-api>
 
