@@ -6,6 +6,8 @@ import android.content.Context;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.PopupMenu;
 import android.webkit.WebView;
 import com.getcapacitor.Logger;
 import com.getcapacitor.JSObject;
@@ -80,6 +82,39 @@ public class NativeClipboard {
 
     public ActionMode.Callback getActionModeCallback() {
         return actionModeCallback;
+    }
+
+    public void showPopupMenu(View anchorView, String selectedText) {
+        if (listener == null) return;
+
+        // Only show paste if enabled and clipboard has content
+        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        if (!enablePaste || clipboard == null || !clipboard.hasPrimaryClip()) {
+            return; // Nothing to show
+        }
+
+        PopupMenu popup = new PopupMenu(context, anchorView);
+        Menu menu = popup.getMenu();
+        menu.add(Menu.NONE, android.R.id.paste, 1, "Paste");
+
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == android.R.id.paste) {
+                JSObject result = new JSObject();
+                result.put("action", "paste");
+                
+                ClipData.Item clipItem = clipboard.getPrimaryClip().getItemAt(0);
+                if (clipItem != null && clipItem.getText() != null) {
+                    String pasteData = clipItem.getText().toString();
+                    result.put("text", pasteData);
+                }
+                
+                listener.onClipboardAction(result);
+                return true;
+            }
+            return false;
+        });
+
+        popup.show();
     }
 
     private ActionMode.Callback createActionModeCallback() {
