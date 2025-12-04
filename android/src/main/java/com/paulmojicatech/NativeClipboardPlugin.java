@@ -1,7 +1,9 @@
 package com.paulmojicatech;
 
+import android.os.Build;
 import android.view.ActionMode;
 import android.webkit.WebView;
+import androidx.annotation.RequiresApi;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -12,7 +14,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class NativeClipboardPlugin extends Plugin {
 
     private NativeClipboard implementation;
-    private ActionMode.Callback originalCallback;
+    private ActionMode.Callback customActionModeCallback;
 
     @Override
     public void load() {
@@ -48,10 +50,10 @@ public class NativeClipboardPlugin extends Plugin {
 
                 @Override
                 public String getSelectedText() {
-                    // Get selected text from WebView
+                    // Get selected text from WebView via JavaScript
                     final String[] result = {""};
                     WebView webView = (WebView) bridge.getWebView();
-                    
+
                     webView.evaluateJavascript(
                         "(function() { return window.getSelection().toString(); })();",
                         value -> {
@@ -60,42 +62,53 @@ public class NativeClipboardPlugin extends Plugin {
                             }
                         }
                     );
-                    
+
                     return result[0];
                 }
             }
         );
 
-        // Override the WebView's action mode callback
-        bridge.getActivity().runOnUiThread(() -> {
-            WebView webView = (WebView) bridge.getWebView();
-            webView.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
-                private ActionMode.Callback customCallback = implementation.getActionModeCallback();
-                
-                @Override
-                public boolean onCreateActionMode(ActionMode mode, android.view.Menu menu) {
-                    return customCallback != null && customCallback.onCreateActionMode(mode, menu);
-                }
-
-                @Override
-                public boolean onPrepareActionMode(ActionMode mode, android.view.Menu menu) {
-                    return customCallback != null && customCallback.onPrepareActionMode(mode, menu);
-                }
-
-                @Override
-                public boolean onActionItemClicked(ActionMode mode, android.view.MenuItem item) {
-                    return customCallback != null && customCallback.onActionItemClicked(mode, item);
-                }
-
-                @Override
-                public void onDestroyActionMode(ActionMode mode) {
-                    if (customCallback != null) {
-                        customCallback.onDestroyActionMode(mode);
-                    }
-                }
+        // Override the WebView's action mode callback (API 23+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            bridge.getActivity().runOnUiThread(() -> {
+                setCustomSelectionActionMode(call);
             });
-        });
+        } else {
+            call.resolve();
+        }
+    }
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void setCustomSelectionActionMode(PluginCall call) {
+        WebView webView = (WebView) bridge.getWebView();
+
+        customActionModeCallback = new ActionMode.Callback() {
+            private ActionMode.Callback customCallback = implementation.getActionModeCallback();
+
+            @Override
+            public boolean onCreateActionMode(ActionMode mode, android.view.Menu menu) {
+                return customCallback != null && customCallback.onCreateActionMode(mode, menu);
+            }
+
+            @Override
+            public boolean onPrepareActionMode(ActionMode mode, android.view.Menu menu) {
+                return customCallback != null && customCallback.onPrepareActionMode(mode, menu);
+            }
+
+            @Override
+            public boolean onActionItemClicked(ActionMode mode, android.view.MenuItem item) {
+                return customCallback != null && customCallback.onActionItemClicked(mode, item);
+            }
+
+            @Override
+            public void onDestroyActionMode(ActionMode mode) {
+                if (customCallback != null) {
+                    customCallback.onDestroyActionMode(mode);
+                }
+            }
+        };
+
+        webView.setCustomSelectionActionModeCallback(customActionModeCallback);
         call.resolve();
     }
 
@@ -103,12 +116,20 @@ public class NativeClipboardPlugin extends Plugin {
     public void disableContextMenu(PluginCall call) {
         implementation.disableContextMenu();
 
-        bridge.getActivity().runOnUiThread(() -> {
-            WebView webView = (WebView) bridge.getWebView();
-            webView.setCustomSelectionActionModeCallback(null);
-        });
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            bridge.getActivity().runOnUiThread(() -> {
+                disableCustomSelectionActionMode();
+            });
+        }
 
         call.resolve();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void disableCustomSelectionActionMode() {
+        WebView webView = (WebView) bridge.getWebView();
+        webView.setCustomSelectionActionModeCallback(null);
+        customActionModeCallback = null;
     }
 }
 
