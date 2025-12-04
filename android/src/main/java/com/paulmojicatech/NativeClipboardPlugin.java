@@ -2,6 +2,7 @@ package com.paulmojicatech;
 
 import android.os.Build;
 import android.view.ActionMode;
+import android.view.View;
 import androidx.annotation.RequiresApi;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -15,6 +16,7 @@ public class NativeClipboardPlugin extends Plugin {
 
     private NativeClipboard implementation;
     private ActionMode.Callback customActionModeCallback;
+    private View.OnLongClickListener longPressListener;
 
     @Override
     public void load() {
@@ -93,9 +95,38 @@ public class NativeClipboardPlugin extends Plugin {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             bridge.getActivity().runOnUiThread(() -> {
                 setCustomSelectionActionMode(call);
+                setupLongPressListener();
             });
         } else {
+            bridge.getActivity().runOnUiThread(() -> {
+                setupLongPressListener();
+            });
             call.resolve();
+        }
+    }
+
+    private void setupLongPressListener() {
+        try {
+            Object webViewObject = bridge.getWebView();
+            
+            longPressListener = v -> {
+                android.util.Log.d("NativeClipboard", "Long press detected - showing paste menu");
+                
+                // Show paste menu on UI thread
+                bridge.getActivity().runOnUiThread(() -> {
+                    implementation.showPopupMenu((View) webViewObject, null);
+                });
+                
+                return true;
+            };
+            
+            // Set the long click listener
+            Method setLongClickMethod = webViewObject.getClass().getMethod("setOnLongClickListener", View.OnLongClickListener.class);
+            setLongClickMethod.invoke(webViewObject, longPressListener);
+            
+            android.util.Log.d("NativeClipboard", "Long press listener set successfully");
+        } catch (Exception e) {
+            android.util.Log.e("NativeClipboard", "Error setting long press listener", e);
         }
     }
 
@@ -152,13 +183,26 @@ public class NativeClipboardPlugin extends Plugin {
     public void disableContextMenu(PluginCall call) {
         implementation.disableContextMenu();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            bridge.getActivity().runOnUiThread(() -> {
+        bridge.getActivity().runOnUiThread(() -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 disableCustomSelectionActionMode();
-            });
-        }
+            }
+            removeLongPressListener();
+        });
 
         call.resolve();
+    }
+
+    private void removeLongPressListener() {
+        try {
+            Object webViewObject = bridge.getWebView();
+            Method setLongClickMethod = webViewObject.getClass().getMethod("setOnLongClickListener", View.OnLongClickListener.class);
+            setLongClickMethod.invoke(webViewObject, (View.OnLongClickListener) null);
+            longPressListener = null;
+            android.util.Log.d("NativeClipboard", "Long press listener removed");
+        } catch (Exception e) {
+            android.util.Log.e("NativeClipboard", "Error removing long press listener", e);
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)

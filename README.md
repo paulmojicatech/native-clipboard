@@ -103,6 +103,7 @@ echo(options: { value: string; }) => Promise<{ value: string; }>
 
 --------------------
 
+
 ### read()
 
 ```typescript
@@ -114,6 +115,7 @@ Read text from the native clipboard
 **Returns:** <code>Promise&lt;{ value: string; }&gt;</code>
 
 --------------------
+
 
 ### write(...)
 
