@@ -2,7 +2,6 @@ package com.paulmojicatech;
 
 import android.os.Build;
 import android.view.ActionMode;
-import android.webkit.WebView;
 import androidx.annotation.RequiresApi;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -52,7 +51,7 @@ public class NativeClipboardPlugin extends Plugin {
                 public String getSelectedText() {
                     // Get selected text from WebView via JavaScript
                     final String[] result = {""};
-                    WebView webView = (WebView) bridge.getWebView();
+                    android.webkit.WebView webView = (android.webkit.WebView) bridge.getWebView();
 
                     webView.evaluateJavascript(
                         "(function() { return window.getSelection().toString(); })();",
@@ -80,7 +79,7 @@ public class NativeClipboardPlugin extends Plugin {
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void setCustomSelectionActionMode(PluginCall call) {
-        WebView webView = (WebView) bridge.getWebView();
+        android.webkit.WebView webView = (android.webkit.WebView) bridge.getWebView();
 
         customActionModeCallback = new ActionMode.Callback() {
             private ActionMode.Callback customCallback = implementation.getActionModeCallback();
@@ -127,7 +126,7 @@ public class NativeClipboardPlugin extends Plugin {
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void disableCustomSelectionActionMode() {
-        WebView webView = (WebView) bridge.getWebView();
+        android.webkit.WebView webView = (android.webkit.WebView) bridge.getWebView();
         webView.setCustomSelectionActionModeCallback(null);
         customActionModeCallback = null;
     }
