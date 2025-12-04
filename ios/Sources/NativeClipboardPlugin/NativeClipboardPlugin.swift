@@ -2,6 +2,7 @@ import Foundation
 import Capacitor
 import UIKit
 import WebKit
+import ObjectiveC
 
 /**
  * Please read the Capacitor iOS Plugin Development Guide
@@ -25,20 +26,20 @@ public class NativeClipboardPlugin: CAPPlugin, CAPBridgedPlugin, UIGestureRecogn
             "value": implementation.echo(value)
         ])
     }
-    
+
     @objc func enableContextMenu(_ call: CAPPluginCall) {
         let enableCopy = call.getBool("enableCopy") ?? true
         let enablePaste = call.getBool("enablePaste") ?? true
         let enableCut = call.getBool("enableCut") ?? true
         let enableSelectAll = call.getBool("enableSelectAll") ?? true
-        
+
         DispatchQueue.main.async { [weak self] in
             guard let self = self,
                   let webView = self.bridge?.webView else {
                 call.reject("WebView not available")
                 return
             }
-            
+
             self.implementation.setupGestureRecognizer(
                 for: webView,
                 target: self,
@@ -48,12 +49,12 @@ public class NativeClipboardPlugin: CAPPlugin, CAPBridgedPlugin, UIGestureRecogn
                 enableCut: enableCut,
                 enableSelectAll: enableSelectAll
             )
-            
+
             self.isContextMenuEnabled = true
             call.resolve()
         }
     }
-    
+
     @objc func disableContextMenu(_ call: CAPPluginCall) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self,
@@ -61,39 +62,39 @@ public class NativeClipboardPlugin: CAPPlugin, CAPBridgedPlugin, UIGestureRecogn
                 call.reject("WebView not available")
                 return
             }
-            
+
             self.implementation.removeGestureRecognizer(from: webView)
             self.isContextMenuEnabled = false
             call.resolve()
         }
     }
-    
+
     @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
         guard gesture.state == .began,
               let webView = bridge?.webView else {
             return
         }
-        
+
         let point = gesture.location(in: webView)
-        
+
         // Get selected text from WebView
         let js = "window.getSelection().toString();"
         webView.evaluateJavaScript(js) { [weak self] result, error in
             guard let self = self else { return }
-            
+
             let selectedText = result as? String ?? ""
-            
+
             DispatchQueue.main.async {
                 self.showNativeContextMenu(at: point, in: webView, selectedText: selectedText)
             }
         }
     }
-    
+
     private func showNativeContextMenu(at point: CGPoint, in view: UIView, selectedText: String) {
         let hasSelection = !selectedText.isEmpty
-        
+
         var actions: [UIAction] = []
-        
+
         // Copy action
         if hasSelection && implementation.isActionEnabled("copy") {
             let copyAction = UIAction(title: "Copy", image: UIImage(systemName: "doc.on.doc")) { [weak self] _ in
@@ -105,7 +106,7 @@ public class NativeClipboardPlugin: CAPPlugin, CAPBridgedPlugin, UIGestureRecogn
             }
             actions.append(copyAction)
         }
-        
+
         // Cut action
         if hasSelection && implementation.isActionEnabled("cut") {
             let cutAction = UIAction(title: "Cut", image: UIImage(systemName: "scissors")) { [weak self] _ in
@@ -117,7 +118,7 @@ public class NativeClipboardPlugin: CAPPlugin, CAPBridgedPlugin, UIGestureRecogn
             }
             actions.append(cutAction)
         }
-        
+
         // Paste action
         if implementation.isActionEnabled("paste"), let clipboardText = UIPasteboard.general.string {
             let pasteAction = UIAction(title: "Paste", image: UIImage(systemName: "doc.on.clipboard")) { [weak self] _ in
@@ -128,7 +129,7 @@ public class NativeClipboardPlugin: CAPPlugin, CAPBridgedPlugin, UIGestureRecogn
             }
             actions.append(pasteAction)
         }
-        
+
         // Select All action
         if implementation.isActionEnabled("selectAll") {
             let selectAllAction = UIAction(title: "Select All", image: UIImage(systemName: "selection.pin.in.out")) { [weak self] _ in
@@ -139,24 +140,48 @@ public class NativeClipboardPlugin: CAPPlugin, CAPBridgedPlugin, UIGestureRecogn
             }
             actions.append(selectAllAction)
         }
-        
+
         guard !actions.isEmpty else { return }
-        
-        let menu = UIMenu(children: actions)
-        
+
         if #available(iOS 16.0, *) {
-            let config = UIEditMenuConfiguration(identifier: nil, sourcePoint: point)
-            UIEditMenuInteraction.shared(for: view).presentEditMenu(with: config)
+            // Remove existing interaction if present
+            let interactions = view.interactions.compactMap { $0 as? UIEditMenuInteraction }
+            for interaction in interactions {
+                view.removeInteraction(interaction)
+            }
+            // Create a new interaction
+            let interaction = UIEditMenuInteraction(delegate: self)
+            view.addInteraction(interaction)
+            let menu = UIMenu(children: actions)
+            interaction.presentEditMenu(with: UIEditMenuConfiguration(identifier: nil, sourcePoint: point))
+            // Store menu for delegate
+            objc_setAssociatedObject(view, &NativeClipboardPlugin.menuKey, menu, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         } else if #available(iOS 13.0, *) {
+            let menu = UIMenu(children: actions)
             // Fallback for iOS 13-15
             let menuController = UIMenuController.shared
             menuController.showMenu(from: view, rect: CGRect(origin: point, size: .zero))
         }
     }
-    
+
     // Allow gesture to work alongside other gestures
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
     }
 }
 
+private extension NativeClipboardPlugin {
+    static var menuKey: UInt8 = 0
+}
+
+@available(iOS 16.0, *)
+extension NativeClipboardPlugin: UIEditMenuInteractionDelegate {
+    public func editMenuInteraction(_ interaction: UIEditMenuInteraction, menuFor configuration: UIEditMenuConfiguration, suggestedActions: [UIMenuElement]) -> UIMenu? {
+        if let webView = self.bridge?.webView {
+            if let menu = objc_getAssociatedObject(webView, &NativeClipboardPlugin.menuKey) as? UIMenu {
+                return menu
+            }
+        }
+        return nil
+    }
+}
