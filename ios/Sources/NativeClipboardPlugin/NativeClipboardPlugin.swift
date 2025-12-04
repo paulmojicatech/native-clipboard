@@ -14,6 +14,8 @@ public class NativeClipboardPlugin: CAPPlugin, CAPBridgedPlugin, UIGestureRecogn
     public let jsName = "NativeClipboard"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "echo", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "read", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "write", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "enableContextMenu", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "disableContextMenu", returnType: CAPPluginReturnPromise)
     ]
@@ -25,6 +27,22 @@ public class NativeClipboardPlugin: CAPPlugin, CAPBridgedPlugin, UIGestureRecogn
         call.resolve([
             "value": implementation.echo(value)
         ])
+    }
+    
+    @objc func read(_ call: CAPPluginCall) {
+        let value = UIPasteboard.general.string ?? ""
+        call.resolve([
+            "value": value
+        ])
+    }
+    
+    @objc func write(_ call: CAPPluginCall) {
+        guard let text = call.getString("string") else {
+            call.reject("Text is required")
+            return
+        }
+        UIPasteboard.general.string = text
+        call.resolve()
     }
 
     @objc func enableContextMenu(_ call: CAPPluginCall) {

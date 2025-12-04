@@ -8,6 +8,7 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import java.lang.reflect.Method;
 
 @CapacitorPlugin(name = "NativeClipboard")
 public class NativeClipboardPlugin extends Plugin {
@@ -27,6 +28,23 @@ public class NativeClipboardPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("value", implementation.echo(value));
         call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void read(PluginCall call) {
+        String value = implementation.readClipboard();
+        JSObject ret = new JSObject();
+        ret.put("value", value != null ? value : "");
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void write(PluginCall call) {
+        String text = call.getString("string");
+        if (text != null) {
+            implementation.writeClipboard(text);
+        }
+        call.resolve();
     }
 
     @PluginMethod
@@ -53,17 +71,16 @@ public class NativeClipboardPlugin extends Plugin {
                     final String[] result = {""};
                     try {
                         Object webViewObject = bridge.getWebView();
-                        if (webViewObject instanceof android.webkit.WebView) {
-                            android.webkit.WebView webView = (android.webkit.WebView) webViewObject;
-                            webView.evaluateJavascript(
-                                "(function() { return window.getSelection().toString(); })();",
-                                value -> {
-                                    if (value != null && !value.equals("null")) {
-                                        result[0] = value.replace("\"", "");
-                                    }
+                        // Use reflection to call evaluateJavascript
+                        Method method = webViewObject.getClass().getMethod("evaluateJavascript", String.class, android.webkit.ValueCallback.class);
+                        method.invoke(webViewObject,
+                            "(function() { return window.getSelection().toString(); })();",
+                            (android.webkit.ValueCallback<String>) value -> {
+                                if (value != null && !value.equals("null")) {
+                                    result[0] = value.replace("\"", "");
                                 }
-                            );
-                        }
+                            }
+                        );
                     } catch (Exception e) {
                         android.util.Log.e("NativeClipboard", "Error getting selected text", e);
                     }
@@ -87,37 +104,43 @@ public class NativeClipboardPlugin extends Plugin {
         try {
             // Get the underlying WebView
             Object webViewObject = bridge.getWebView();
-            if (webViewObject instanceof android.webkit.WebView) {
-                android.webkit.WebView webView = (android.webkit.WebView) webViewObject;
-                
-                customActionModeCallback = new ActionMode.Callback() {
-                    private ActionMode.Callback customCallback = implementation.getActionModeCallback();
+            
+            android.util.Log.d("NativeClipboard", "Setting custom selection action mode");
 
-                    @Override
-                    public boolean onCreateActionMode(ActionMode mode, android.view.Menu menu) {
-                        return customCallback != null && customCallback.onCreateActionMode(mode, menu);
+            customActionModeCallback = new ActionMode.Callback() {
+                private ActionMode.Callback customCallback = implementation.getActionModeCallback();
+
+                @Override
+                public boolean onCreateActionMode(ActionMode mode, android.view.Menu menu) {
+                    android.util.Log.d("NativeClipboard", "onCreateActionMode called");
+                    return customCallback != null && customCallback.onCreateActionMode(mode, menu);
+                }
+
+                @Override
+                public boolean onPrepareActionMode(ActionMode mode, android.view.Menu menu) {
+                    android.util.Log.d("NativeClipboard", "onPrepareActionMode called");
+                    return customCallback != null && customCallback.onPrepareActionMode(mode, menu);
+                }
+
+                @Override
+                public boolean onActionItemClicked(ActionMode mode, android.view.MenuItem item) {
+                    android.util.Log.d("NativeClipboard", "onActionItemClicked: " + item.getTitle());
+                    return customCallback != null && customCallback.onActionItemClicked(mode, item);
+                }
+
+                @Override
+                public void onDestroyActionMode(ActionMode mode) {
+                    android.util.Log.d("NativeClipboard", "onDestroyActionMode called");
+                    if (customCallback != null) {
+                        customCallback.onDestroyActionMode(mode);
                     }
+                }
+            };
 
-                    @Override
-                    public boolean onPrepareActionMode(ActionMode mode, android.view.Menu menu) {
-                        return customCallback != null && customCallback.onPrepareActionMode(mode, menu);
-                    }
-
-                    @Override
-                    public boolean onActionItemClicked(ActionMode mode, android.view.MenuItem item) {
-                        return customCallback != null && customCallback.onActionItemClicked(mode, item);
-                    }
-
-                    @Override
-                    public void onDestroyActionMode(ActionMode mode) {
-                        if (customCallback != null) {
-                            customCallback.onDestroyActionMode(mode);
-                        }
-                    }
-                };
-
-                webView.setCustomSelectionActionModeCallback(customActionModeCallback);
-            }
+            // Use reflection to call setCustomSelectionActionModeCallback
+            Method method = webViewObject.getClass().getMethod("setCustomSelectionActionModeCallback", ActionMode.Callback.class);
+            method.invoke(webViewObject, customActionModeCallback);
+            android.util.Log.d("NativeClipboard", "Custom selection action mode callback set successfully");
         } catch (Exception e) {
             // Log error but don't crash
             android.util.Log.e("NativeClipboard", "Error setting custom selection action mode", e);
@@ -142,10 +165,9 @@ public class NativeClipboardPlugin extends Plugin {
     private void disableCustomSelectionActionMode() {
         try {
             Object webViewObject = bridge.getWebView();
-            if (webViewObject instanceof android.webkit.WebView) {
-                android.webkit.WebView webView = (android.webkit.WebView) webViewObject;
-                webView.setCustomSelectionActionModeCallback(null);
-            }
+            // Use reflection to call setCustomSelectionActionModeCallback
+            Method method = webViewObject.getClass().getMethod("setCustomSelectionActionModeCallback", ActionMode.Callback.class);
+            method.invoke(webViewObject, (ActionMode.Callback) null);
         } catch (Exception e) {
             android.util.Log.e("NativeClipboard", "Error disabling custom selection action mode", e);
         }
