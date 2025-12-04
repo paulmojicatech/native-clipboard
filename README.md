@@ -4,8 +4,10 @@ Native context menu with copy, cut, paste, and select all functionality for iOS,
 
 ## Features
 
+- 📋 **Direct Clipboard Access**: Read from and write to the system clipboard
 - 🎯 **Native Gesture Recognition**: Leverages platform-native WebView capabilities
-- 📋 **Full Context Menu**: Copy, Cut, Paste, and Select All actions
+- 🔄 **Cross-App Support**: Access clipboard content from any app on the device
+- 📝 **Full Context Menu**: Copy, Cut, Paste, and Select All actions
 - 🔔 **Event Dispatching**: Get notified when users perform clipboard actions
 - 🌐 **Cross-Platform**: Works on iOS, Android, and Web
 - ⚡ **Zero Configuration**: Works across the entire app without element targeting
@@ -19,6 +21,21 @@ npx cap sync
 ```
 
 ## Quick Start
+
+### Direct Clipboard Access
+
+```typescript
+import { NativeClipboard } from '@paulmojicatech/native-clipboard';
+
+// Read from clipboard (works with text copied from any app)
+const result = await NativeClipboard.read();
+console.log('Clipboard:', result.value);
+
+// Write to clipboard
+await NativeClipboard.write({ string: 'Hello World!' });
+```
+
+### Context Menu
 
 ```typescript
 import { NativeClipboard } from '@paulmojicatech/native-clipboard';
@@ -59,6 +76,8 @@ For complete examples with React and Vue, see [USAGE_EXAMPLE.md](./USAGE_EXAMPLE
 <docgen-index>
 
 * [`echo(...)`](#echo)
+* [`read()`](#read)
+* [`write(...)`](#write)
 * [`enableContextMenu(...)`](#enablecontextmenu)
 * [`disableContextMenu()`](#disablecontextmenu)
 * [`addListener('clipboardMenuAction', ...)`](#addlistenerclipboardmenuaction-)
@@ -81,6 +100,32 @@ echo(options: { value: string; }) => Promise<{ value: string; }>
 | **`options`** | <code>{ value: string; }</code> |
 
 **Returns:** <code>Promise&lt;{ value: string; }&gt;</code>
+
+--------------------
+
+### read()
+
+```typescript
+read() => Promise<{ value: string; }>
+```
+
+Read text from the native clipboard
+
+**Returns:** <code>Promise&lt;{ value: string; }&gt;</code>
+
+--------------------
+
+### write(...)
+
+```typescript
+write(options: { string: string; }) => Promise<void>
+```
+
+Write text to the native clipboard
+
+| Param         | Type                             |
+| ------------- | -------------------------------- |
+| **`options`** | <code>{ string: string; }</code> |
 
 --------------------
 
@@ -161,21 +206,64 @@ Remove all listeners for this plugin
 
 </docgen-api>
 
+## Use Cases
+
+### Reading Clipboard from Other Apps
+
+```typescript
+// User copies text in another app (e.g., Notes, Messages, Browser)
+// Then opens your app
+
+const clipboardContent = await NativeClipboard.read();
+console.log('Got text from other app:', clipboardContent.value);
+
+// Use it in your app
+document.getElementById('myInput').value = clipboardContent.value;
+```
+
+### Sharing Data Between Apps
+
+```typescript
+// Copy data to clipboard so user can paste in another app
+await NativeClipboard.write({ 
+  string: 'https://example.com/share/12345' 
+});
+
+// Show confirmation
+alert('Link copied! You can now paste it anywhere.');
+```
+
 ## How It Works
 
 ### iOS
+- Uses `UIPasteboard.general` for direct clipboard access
 - Adds a `UILongPressGestureRecognizer` to the WebView's scroll view
 - Shows native iOS context menu using `UIMenu` (iOS 13+)
 - Integrates seamlessly with system clipboard
 
 ### Android  
+- Uses `ClipboardManager` for direct clipboard access
 - Overrides WebView's `CustomSelectionActionModeCallback`
 - Uses native Android `ActionMode` for context menu
 - Automatically handles text selection and clipboard operations
 
 ### Web
+- Uses browser's Clipboard API for read/write operations
 - Intercepts `contextmenu` events (right-click)
 - Shows custom-styled menu using Clipboard API
 - Falls back to browser's default menu if disabled
+
+## Permissions
+
+### Android
+No special permissions required. Clipboard access is automatic.
+
+### iOS
+No special permissions required. Clipboard access is automatic.
+
+### Web
+The Clipboard API requires:
+- HTTPS (or localhost for development)
+- User interaction (satisfied by user-initiated actions)
 
 
