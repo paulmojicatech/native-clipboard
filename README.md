@@ -225,8 +225,8 @@ document.getElementById('myInput').value = clipboardContent.value;
 
 ```typescript
 // Copy data to clipboard so user can paste in another app
-await NativeClipboard.write({ 
-  string: 'https://example.com/share/12345' 
+await NativeClipboard.write({
+  string: 'https://example.com/share/12345'
 });
 
 // Show confirmation
@@ -241,7 +241,7 @@ alert('Link copied! You can now paste it anywhere.');
 - Shows native iOS context menu using `UIMenu` (iOS 13+)
 - Integrates seamlessly with system clipboard
 
-### Android  
+### Android
 - Uses `ClipboardManager` for direct clipboard access
 - Overrides WebView's `CustomSelectionActionModeCallback`
 - Uses native Android `ActionMode` for context menu
