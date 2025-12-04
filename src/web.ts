@@ -16,6 +16,25 @@ export class NativeClipboardWeb extends WebPlugin implements NativeClipboardPlug
     return options;
   }
 
+  async read(): Promise<{ value: string }> {
+    try {
+      const text = await navigator.clipboard.readText();
+      return { value: text };
+    } catch (error) {
+      console.error('Failed to read clipboard:', error);
+      return { value: '' };
+    }
+  }
+
+  async write(options: { string: string }): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(options.string);
+    } catch (error) {
+      console.error('Failed to write to clipboard:', error);
+      throw error;
+    }
+  }
+
   async enableContextMenu(options?: {
     enableCopy?: boolean;
     enablePaste?: boolean;

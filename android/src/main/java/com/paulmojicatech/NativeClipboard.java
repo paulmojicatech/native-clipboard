@@ -28,6 +28,35 @@ public class NativeClipboard {
         return value;
     }
 
+    public String readClipboard() {
+        try {
+            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null && clipboard.hasPrimaryClip()) {
+                ClipData clipData = clipboard.getPrimaryClip();
+                if (clipData != null && clipData.getItemCount() > 0) {
+                    ClipData.Item item = clipData.getItemAt(0);
+                    CharSequence text = item.getText();
+                    return text != null ? text.toString() : "";
+                }
+            }
+        } catch (Exception e) {
+            Logger.error("Error reading clipboard", e);
+        }
+        return "";
+    }
+
+    public void writeClipboard(String text) {
+        try {
+            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null) {
+                ClipData clip = ClipData.newPlainText("text", text);
+                clipboard.setPrimaryClip(clip);
+            }
+        } catch (Exception e) {
+            Logger.error("Error writing to clipboard", e);
+        }
+    }
+
     public void enableContextMenu(
             boolean enableCopy,
             boolean enablePaste,

@@ -2,6 +2,16 @@ export interface NativeClipboardPlugin {
   echo(options: { value: string }): Promise<{ value: string }>;
   
   /**
+   * Read text from the native clipboard
+   */
+  read(): Promise<{ value: string }>;
+  
+  /**
+   * Write text to the native clipboard
+   */
+  write(options: { string: string }): Promise<void>;
+  
+  /**
    * Enable native long press context menu for copy/paste
    * This enables system-level gesture recognition on the WebView
    */
